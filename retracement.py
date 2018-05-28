@@ -6,7 +6,6 @@ from enum import Enum
 LOGGER = logging.getLogger(__name__)
 
 BODY_THRESH = 0.6
-WICK_THRESH = 0.1
 FIBS = [0.236, 0.382, 0.5, 0.618, 0.705, 0.786, 1]
 PIP_THRESH = 30
 MIN_PRICE_MEMORY = 20
@@ -20,15 +19,14 @@ class Retracement(Enum):
     FORWARD2 = 3
 
 
-def retracement(maintrend, data_, dates):
-    LOGGER.debug(maintrend)
+def retracement(trend, data_, dates):
+    print(trend)
 
     buckets = {}
     thresh = close = time = None
     state = Retracement.NOTHING
     swing_f = None
     swing_r = None
-    trend = maintrend
 
     price_memory = []
 
@@ -77,7 +75,6 @@ def retracement(maintrend, data_, dates):
 
                 LOGGER.debug("Done with order block!")
                 state = Retracement.NOTHING
-                trend = maintrend
 
             else:
                 LOGGER.debug("Still moving forward 2")
@@ -98,7 +95,6 @@ def retracement(maintrend, data_, dates):
                 LOGGER.debug(("VIOLATED", abs(close - swing_f) * 10000))
 
                 state = Retracement.NOTHING
-                trend = maintrend
 
                 LOGGER.debug("Retracement violation!")
             elif complete:
@@ -128,7 +124,6 @@ def retracement(maintrend, data_, dates):
                     LOGGER.debug("Starting retracement from swing_f: {swingf:.4f}".format(swingf=swing_f))
                 elif trashed:
                     state = Retracement.NOTHING
-                    trend = maintrend
             else:
                 swing_f = item.close
                 LOGGER.debug("Still moving forward 1")
@@ -141,7 +136,7 @@ def retracement(maintrend, data_, dates):
             countertrend =  (trend == f.BearBull.BEARISH and item.close > item.open) or \
                             (trend == f.BearBull.BULLISH and item.close < item.open)
 
-            LOGGER.debug((item.time, countertrend, item.open, item.high, item.low, item.close))
+            LOGGER.debug((item.time, trend, countertrend, item.open, item.high, item.low, item.close))
 
             if item.high == item.low or not (item.time.year, item.time.month, item.time.day) in dates:
                 continue
@@ -149,6 +144,7 @@ def retracement(maintrend, data_, dates):
             if countertrend:
                 oc = abs(item.open - item.close)
                 hl = item.high - item.low
+                LOGGER.debug((oc, hl))
 
                 body = oc / hl > BODY_THRESH
 
@@ -157,7 +153,7 @@ def retracement(maintrend, data_, dates):
                 touch = item.high if trend == f.BearBull.BEARISH else item.low
                 touches = [t for t in touches_ if abs(t - touch) <= TOUCH_THRESH]
 
-                LOGGER.debug((item.time, touches_, touch, touches))
+                LOGGER.debug((body, touches_, touch, touches))
 
                 if body and touches:
                     close = item.close
@@ -167,13 +163,8 @@ def retracement(maintrend, data_, dates):
                     state = Retracement.FORWARD1
                     last_idx = item_idx + 1
 
-            else:
-
-
-
-
-            LOGGER.debug("Counter-trend order block: {time}: {open}, {high}, {low}, {close}".format(
-                open=item.open, close=item.close, high=item.high, low=item.low, time=time))
+                    LOGGER.debug("Counter-trend order block: {time}: {open}, {high}, {low}, {close}".format(
+                        open=item.open, close=item.close, high=item.high, low=item.low, time=time))
 
     return buckets
 
@@ -223,6 +214,9 @@ def print_buckets_(buckets, complete):
         len_buckets += len(entry)
         print("****  fib: {key} ****".format(key=key))
         f.print_complete_summary(entry, [f.Summaries.DAYOFWEEK], samplesizes)
+        for item in entry:
+            print("---- {}".format(item))
+        print()
 
     return len_buckets
 
@@ -230,17 +224,20 @@ def print_buckets_(buckets, complete):
 def print_buckets(buckets):
     print("COMPLETED: ")
     len_compl = print_buckets_(buckets, True)
+    print()
 
     print("VIOLATIONS: ")
     len_viol = print_buckets_(buckets, False)
-
-    len_total = len_compl + len_viol
-    pc = len_compl * 100. / len_total
-
     print()
 
-    print("Complete: {len_compl}/{len_total}, {pc:.2f}".format(
-        len_compl=len_compl, len_total=len_total, pc=pc))
+    len_total = len_compl + len_viol
+    if len_total:
+        pc = len_compl * 100. / len_total
+        print("--- Complete: {len_compl}/{len_total}, {pc:.2f}".format(
+            len_compl=len_compl, len_total=len_total, pc=pc))
+    else:
+        print("--- Complete: 0/0")
+    print()
 
 
 if __name__ == '__main__':
@@ -273,7 +270,6 @@ if __name__ == '__main__':
     # profile bearish days
     beardates = dates(f.filter(data_d, f.filter_bearish, True)) # , False)
     bearbuckets = retracement(f.BearBull.BEARISH, data_ltf, beardates)
-    print(bearbuckets)
     print_buckets(bearbuckets)
 
     # profile bullish days
