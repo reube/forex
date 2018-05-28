@@ -113,16 +113,22 @@ def load_candles(candle_file):
     return candles
 
 
-def dayofweek(item):
-    return calendar.day_name[item.time.weekday()]
+def _time(item):
+    time = item
+    if isinstance(item, Candle):
+        time = item.time
+    return time
 
+
+def dayofweek(item):
+    return calendar.day_name[_time(item).weekday()]
 
 def filter_hr(item, hours):
-    return item.time.hour in hours
+    return _time(item).hour in hours
 
 
 def filter_day(item, days):
-    return item.time.day in days
+    return _time(item).day in days
 
 
 def filter_dayofweek(item, days):
@@ -130,19 +136,19 @@ def filter_dayofweek(item, days):
 
 
 def filter_week(item, weeks):
-    return str(item.time.isocalendar()[1]) in weeks
+    return str(_time(item).isocalendar()[1]) in weeks
 
 
 def filter_month(item, months):
-    return calendar.month_name[item.time.month] in months
+    return calendar.month_name[_time(item).month] in months
 
 
 def filter_weekday(item, _inlist):
-    return item.time.day < 5
+    return _time(item).weekday() < 5
 
 
 def filter_year(item, years):
-    return item.time.year in years
+    return _time(item).year in years
 
 
 def filter_bearish(item, compress):
@@ -174,35 +180,38 @@ def filter_thismth(data):
             data, filter_year, [now.year]), filter_month, [calendar.month_name[now.month]])
 
 
-def classify_hr(item, periods):
+def classify_hr(time, periods):
     for period_ in periods:
         period = period_.split('-')
-        if int(period[0]) <= item.time.hour < int(period[1]):
+        if int(period[0]) <= time.hour < int(period[1]):
             return period_
 
 
-def classify_day(item, _periods):
-    return str(item.time.day)
+def classify_day(time, _periods):
+    return str(time.day)
 
 
-def classify_dayofweek(item, _periods):
-    return calendar.day_name[item.time.weekday()]
+def classify_dayofweek(time, _periods):
+    return calendar.day_name[time.weekday()]
 
 
-def classify_week(item, _periods):
-    return str(item.time.isocalendar()[1])
+def classify_week(time, _periods):
+    return str(time.isocalendar()[1])
 
 
-def classify_month(item, _periods):
-    return calendar.month_name[item.time.month]
+def classify_month(time, _periods):
+    return calendar.month_name[time.month]
 
 
-def classify_year(item, _periods):
-    return str(item.time.year)
+def classify_year(time, _periods):
+    return str(time.year)
 
 
 def classify(item, buckets, classify_fun, periods=None):
-    bucket_period = classify_fun(item, periods)
+    time = item
+    if isinstance(item, Candle):
+        time = item.time
+    bucket_period = classify_fun(time, periods)
     bucket = buckets.get(bucket_period, [])
     bucket.append(item)
     buckets[bucket_period] = bucket

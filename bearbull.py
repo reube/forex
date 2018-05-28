@@ -31,4 +31,4 @@ def print_mth_summary(datafile):
 
 
 if __name__ == '__main__':
-    print_yr_summary(sys.argv[1])
+    print_mth_summary(sys.argv[1])
