@@ -34,6 +34,13 @@ WEEKS_YR = [str(wk) for wk in range(1, 54)]
 DAYS_MTH = [str(day) for day in range(1, 32)]
 YEARS = [str(yr) for yr in range(2013, 2020)]
 
+PAIRS = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD',
+         'CADCHF', 'CADJPY', 'CHFJPY',
+         'EURAUD', 'EURCAD', 'EURCHF', 'EURGBP', 'EURJPY', 'EURNZD', 'EURUSD',
+         'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPJPY', 'GBPNZD', 'GBPUSD',
+         'NZDCAD', 'NZDCHF', 'NZDJPY', 'NZDUSD',
+         'USDCAD', 'USDCHF', 'USDJPY']
+
 
 class BearBull(Enum):
     BEARISH = 0
@@ -183,7 +190,8 @@ def filter_thismth(data):
 def classify_hr(time, periods):
     for period_ in periods:
         period = period_.split('-')
-        if int(period[0]) <= time.hour < int(period[1]):
+        hour = (time.hour + 12) % 24
+        if int(period[0]) <= hour < int(period[1]):
             return period_
 
 
@@ -215,6 +223,26 @@ def classify(item, buckets, classify_fun, periods=None):
     bucket = buckets.get(bucket_period, [])
     bucket.append(item)
     buckets[bucket_period] = bucket
+
+
+def first_fun_hour(item):
+    return _time(item).hour == 0
+
+
+def first_fun_day(item):
+    return _time(item).day == 1
+
+
+def first_fun_week(item):
+    return _time(item).isocalendar()[1] == 1
+
+
+def first_fun_weekday(item):
+    return _time(item).weekday() == 0
+
+
+def first_fun_month(item):
+    return _time(item).month == 1
 
 
 def get_intraday_summary(data):
